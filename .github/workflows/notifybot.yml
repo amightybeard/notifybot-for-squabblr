@@ -1,0 +1,30 @@
+name: Run Notifier Bot
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    name: Notify on new post
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Notifier Bot
+      run: python notifier.py
+      env:
+        SQUABBLES_TOKEN: ${{ secrets.SQUABBLES_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.WRITE_TO_TIMESTAMP }}
