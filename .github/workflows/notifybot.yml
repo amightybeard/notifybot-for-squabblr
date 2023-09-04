@@ -19,7 +19,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install -r requirements.txt
+        pip install -r includes/requirements.txt
 
     - name: Notifier Bot
       run: python notifier.py
