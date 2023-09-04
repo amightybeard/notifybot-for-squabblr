@@ -6,31 +6,43 @@ from datetime import datetime
 
 SQUABBLES_TOKEN = os.environ.get('SQUABBLES_TOKEN')
 GIST_TOKEN = os.environ.get('GITHUB_TOKEN')
-GIST_ID = os.environ.get('AUTORESPONDER_GIST')
-FILE_NAME = 'notifier-timestamp.json'
-CSV_PATH = 'csv/notifier.csv'
+GIST_ID = os.environ.get('NOTIFYBOT_GIST')
+FILE_NAME = 'notifybot.json'
 BOT_USER_ID = 35748
 
-def get_last_timestamp(community_name):
-    resp = requests.get(f'https://api.github.com/gists/{GIST_ID}', headers={'Authorization': f'token {GIST_TOKEN}'})
-    data = resp.json()
-    timestamps = data['files'][FILE_NAME]['content']
-    timestamps_dict = eval(timestamps)  # Convert the string representation of dictionary back to a dictionary
-    return datetime.strptime(timestamps_dict.get(community_name, '2000-01-01T00:00:00.000000Z'), '%Y-%m-%dT%H:%M:%S.%fZ')
+def fetch_last_processed_ids():
+    try:
+        resp = requests.get(GIST_URL)
+        resp.raise_for_status()
+        data = resp.json()
+        return data
+    except requests.RequestException as e:
+        logging.error(f"Failed to fetch processed IDs from Gist. Error: {e}")
+        return {}
 
-def save_last_timestamp(community_name, timestamp):
-    current_data = requests.get(f'https://api.github.com/gists/{GIST_ID}', headers={'Authorization': f'token {GIST_TOKEN}'}).json()
-    current_timestamps = eval(current_data['files'][FILE_NAME]['content'])
-    current_timestamps[community_name] = timestamp.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-    data = {
-        'files': {
+def save_processed_id(community, post_id):
+    data = fetch_last_processed_ids()
+    data[community]['last_processed_id'] = post_id
+    
+    headers = {
+        'Authorization': f'token {GIST_TOKEN}',
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+    }
+    
+    payload = {
+        "files": {
             FILE_NAME: {
-                'content': json.dumps(current_timestamps, indent=4)  # Use json.dumps with indent
+                "content": json.dumps(data, indent=4)
             }
         }
     }
-    resp = requests.patch(f'https://api.github.com/gists/{GIST_ID}', json=data, headers={'Authorization': f'token {GIST_TOKEN}'})
-    return resp.json()
+
+    try:
+        resp = requests.patch(f"https://api.github.com/gists/{GIST_ID}", headers=headers, json=payload)
+        resp.raise_for_status()
+    except requests.RequestException as e:
+        logging.error(f"Failed to update processed ID for {community}. Error: {e}. Resp: {resp}")
 
 def send_dm(thread_id, message):
     headers = {
@@ -39,20 +51,26 @@ def send_dm(thread_id, message):
     resp = requests.post(f'https://squabblr.co/api/message-threads/{thread_id}/messages', data={"content": message, "user_id": BOT_USER_ID}, headers=headers)
     return resp.json()
 
-def get_latest_posts(username, thread_id, community):
-    last_timestamp = get_last_timestamp(community)
-    data = requests.get(f'https://squabblr.co/api/s/{community}/posts?page=1&sort=new&').json()
+def get_latest_posts():
+    processed_ids = fetch_last_processed_ids()
 
-    for post in data['data']:
-        created_at = post['created_at']
-        post_date = datetime.strptime(created_at, '%Y-%m-%dT%H:%M:%S.%fZ')
-        if post_date > last_timestamp:
-            dm_message = f"/s/{post['community_name']} has a new post by @{post['author_username']}: {post['title']}: https://squabblr.co{post['path']}."
-            send_dm(thread_id, dm_message)
-            save_last_timestamp(community, post_date)
+    for community, data in processed_ids.items():
+        last_processed_id = data['last_processed_id']
+
+        logging.info(f"Checking posts for community: {community}")
+        response = requests.get(f'https://squabblr.co/api/s/{community}/posts?page=1&sort=new&')
+
+        if response.status_code != 200:
+            logging.warning(f"Failed to fetch posts for community: {community}")
+            continue
+
+        posts = response.json()["data"]
+        for post in posts:
+            post_id = post['id']
+
+            if post_id <= last_processed_id:
+                continue
 
 if __name__ == "__main__":
-    with open(CSV_PATH, mode='r') as file:
-        csv_reader = csv.DictReader(file)
-        for row in csv_reader:
-            get_latest_posts(row['Username'], row['DM_Thread_ID'], row['Community'])
+    logging.basicConfig(level=logging.INFO)
+    get_latest_posts()
