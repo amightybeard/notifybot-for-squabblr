@@ -55,9 +55,12 @@ def check_and_notify(user):
         resp = requests.get(f'https://squabblr.co/api/s/{community_name}/posts?page=1&sort=new')
         resp.raise_for_status()
         posts = resp.json()
+
+        # Log the API response for debugging
+        logging.info(f"API response for /s/{community_name}: {posts}")
         
         # If there's a new post
-        if posts and posts[0]['id'] > last_processed_id:
+        if posts and isinstance(posts, list) and len(posts) > 0 and posts[0]['id'] > last_processed_id:
             post = posts[0]
             message = f"/s/{community_name} has a new post by {post['author_username']}: [{post['title']}]({post['url']})"
             
