@@ -46,51 +46,49 @@ def update_notifybot_gist(data):
 # 4. Helper function to check for new posts and notify moderators:
 
 def check_and_notify(user):
-    headers = {'authorization': 'Bearer ' + SQUABBLES_TOKEN}
+    headers = {
+        'Authorization': f"Bearer {SQUABBLR_API_TOKEN}",
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+    }
+
     for community in user['communities']:
         community_name = community['community_name']
         last_processed_id = community['last_processed_id']
-        
+
         logging.info(f"Checking /s/{community_name} for new posts")
         logging.info(f"Last processed ID for /s/{community_name}: {last_processed_id}")
-        
-        # Fetch the latest posts for the community
-        resp = requests.get(f'https://squabblr.co/api/s/{community_name}/posts?page=1&sort=new')
+
+        resp = requests.get(f"https://squabblr.co/api/communities/{community_name}/posts", headers=headers)
         resp.raise_for_status()
-        posts = resp.json()
-        
-        # Log the API response for debugging
-        logging.info(f"API response for /s/{community_name}: {posts}")
-        
-        # If there's a new post
-        posts_list = posts.get('data', [])
-        if posts_list and isinstance(posts_list, list) and len(posts_list) > 0:
-            latest_post_id = int(posts[0]['id'])
-            logging.info(f"Latest post ID for /s/{community_name}: {latest_post_id}")
+
+        posts = resp.json().get('data', [])
+
+        # Loop through all posts to find new ones
+        new_posts = [post for post in posts if post['id'] > last_processed_id]
+
+        for post in new_posts:
+            message = f"/s/{community_name} has a new post by {post['author_username']}: [{post['title']}]({post['url']})"
             
-            if latest_post_id > int(last_processed_id):
-                post = posts[0]
-                message = f"/s/{community_name} has a new post by {post['author_username']}: [{post['title']}]({post['url']})"
-                
-                logging.info(f"Located a new post in /s/{community_name}. Notifying the mods.")
-                logging.info(f"Sending a DM to {user['username']}: {message}")
-                
-                # Send DM to the moderator
-                resp = requests.post(f"https://squabblr.co/api/message-threads/{user['thread_id']}/messages",
-                                     data={"content": message, "user_id": NOTIFYBOT_ID},
-                                     headers=headers)
-                
-                resp.raise_for_status()
-                
-                logging.info("DM has been sent.")
-                
-                # Update the last_processed_id
+            logging.info(f"Located a new post in /s/{community_name}. Notifying the mods.")
+            logging.info(f"Sending a DM to {user['username']}: {message}")
+            
+            # Send DM to the moderator
+            resp = requests.post(f"https://squabblr.co/api/message-threads/{user['thread_id']}/messages",
+                                 data={"content": message, "user_id": NOTIFYBOT_ID},
+                                 headers=headers)
+            
+            resp.raise_for_status()
+            
+            logging.info("DM has been sent.")
+            
+            # Update the last_processed_id for this community
+            if post['id'] > community['last_processed_id']:
                 community['last_processed_id'] = post['id']
-                logging.info(f"Updating notifybot.json with the new post ID: {post['id']}")
-            else:
-                logging.info("No new posts found.")
-        else:
-            logging.info(f"No posts found for /s/{community_name}.")
+                logging.info(f"Updating notifybot.json with the new post ID: {post['id']} for /s/{community_name}")
+
+    # Update the notifybot.json gist after processing all communities for this user
+    update_notifybot_gist(NOTIFYBOT_JSON)
 
 
 # 5. Main function:
