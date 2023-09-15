@@ -4,6 +4,7 @@ import os
 import requests
 import time
 import logging
+import json
 
 # Constants
 SQUABBLES_TOKEN = os.environ.get('SQUABBLES_TOKEN')
@@ -22,7 +23,8 @@ def fetch_notifybot_gist():
     headers = {'Authorization': f'token {NOTIFYBOT_GIST_TOKEN}'}
     resp = requests.get(url, headers=headers)
     resp.raise_for_status()  # Raise an exception for HTTP errors
-    return resp.json()['files'][NOTIFYBOT_GIST_FILENAME]['content']
+    json_content = resp.json()['files'][NOTIFYBOT_GIST_FILENAME]['content']
+    return json.loads(json_content)  # Convert the JSON string into a dictionary
 
 # 3. Helper function to update notifybot.json:
 
