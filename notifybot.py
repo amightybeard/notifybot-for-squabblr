@@ -49,14 +49,14 @@ def check_and_notify(user):
     for community in user['communities']:
         community_name = community['community_name']
         last_processed_id = community['last_processed_id']
-        
+        logging.info(f"Last processed ID for /s/{community_name}: {last_processed_id}")
         logging.info(f"Checking /s/{community_name} for new posts")
         
         # Fetch the latest posts for the community
         resp = requests.get(f'https://squabblr.co/api/s/{community_name}/posts?page=1&sort=new')
         resp.raise_for_status()
         posts = resp.json()
-
+        
         # Log the API response for debugging
         logging.info(f"API response for /s/{community_name}: {posts}")
         
