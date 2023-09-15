@@ -42,13 +42,13 @@ def update_notifybot_gist(data):
     resp = requests.patch(url, json=payload, headers=headers)
     logging.info(f"Updating notifybot.json with data: {prettified_data}")
     resp.raise_for_status()
-    if resp.status_code != 200:
+    if resp.status_code not in [200,201]:
         logging.error(f"Update Gist Error response: {resp.text}")
         resp.raise_for_status()
 
 # 4. Helper function to check for new posts and notify moderators:
 
-def check_and_notify(user):
+def check_and_notify(user, notifybot_json):
     headers = {
         'Authorization': f"Bearer {SQUABBLES_TOKEN}",
         'Accept': 'application/json',
@@ -64,7 +64,7 @@ def check_and_notify(user):
 
         resp = requests.get(f"https://squabblr.co/api/s/{community_name}/posts?page=1&sort=new", headers=headers)
         resp.raise_for_status()
-        if resp.status_code != 200:
+        if resp.status_code not in [200,201]:
             logging.error(f"Check and Notify Error in Community response: {resp.text}")
             resp.raise_for_status()
 
@@ -82,7 +82,7 @@ def check_and_notify(user):
             # Send DM to the moderator
             resp = requests.post(f"https://squabblr.co/api/message-threads/{user['thread_id']}/messages", json={"content": message, "user_id": NOTIFYBOT_ID}, headers=headers)
             
-            if resp.status_code != 200:
+            if resp.status_code not in [200,201]:
                 logging.error(f"Check and Notify Error in Post response: {resp.text}")
                 resp.raise_for_status()
             
@@ -93,9 +93,6 @@ def check_and_notify(user):
                 community['last_processed_id'] = post['id']
                 logging.info(f"Updating notifybot.json with the new post ID: {post['id']} for /s/{community_name}")
 
-    # Update the notifybot.json gist after processing all communities for this user
-    update_notifybot_gist(NOTIFYBOT_JSON)
-
 
 # 5. Main function:
 
@@ -105,7 +102,7 @@ def main():
     
     # Check for new posts and notify moderators
     for user in notifybot_json['users']:
-        check_and_notify(user)
+        check_and_notify(user, notifybot_json)
         
         # Cooldown
         time.sleep(15)
