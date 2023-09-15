@@ -31,15 +31,16 @@ def fetch_notifybot_gist():
 def update_notifybot_gist(data):
     url = f'https://api.github.com/gists/{NOTIFYBOT_GIST_ID}'
     headers = {'Authorization': f'token {NOTIFYBOT_GIST_TOKEN}'}
+    prettified_data = json.dumps(data, indent=4)  # Convert the dictionary to a prettified JSON string
     payload = {
         'files': {
             NOTIFYBOT_GIST_FILENAME: {
-                'content': json.dumps(data)  # Convert the dictionary back to a JSON string
+                'content': prettified_data
             }
         }
     }
     resp = requests.patch(url, json=payload, headers=headers)
-    logging.info(f"Updating notifybot.json with data: {json.dumps(data)}")
+    logging.info(f"Updating notifybot.json with data: {prettified_data}")
     resp.raise_for_status()
 
 # 4. Helper function to check for new posts and notify moderators:
