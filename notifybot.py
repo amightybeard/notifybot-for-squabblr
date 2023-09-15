@@ -49,8 +49,9 @@ def check_and_notify(user):
     for community in user['communities']:
         community_name = community['community_name']
         last_processed_id = community['last_processed_id']
-        logging.info(f"Last processed ID for /s/{community_name}: {last_processed_id}")
+        
         logging.info(f"Checking /s/{community_name} for new posts")
+        logging.info(f"Last processed ID for /s/{community_name}: {last_processed_id}")
         
         # Fetch the latest posts for the community
         resp = requests.get(f'https://squabblr.co/api/s/{community_name}/posts?page=1&sort=new')
@@ -61,10 +62,11 @@ def check_and_notify(user):
         logging.info(f"API response for /s/{community_name}: {posts}")
         
         # If there's a new post
-        if posts and isinstance(posts, list) and len(posts) > 0:
+        posts_list = posts.get('data', [])
+        if posts_list and isinstance(posts_list, list) and len(posts_list) > 0:
             latest_post_id = int(posts[0]['id'])
             logging.info(f"Latest post ID for /s/{community_name}: {latest_post_id}")
-            logging.info(f"Last processed ID for /s/{community_name}: {last_processed_id}")
+            
             if latest_post_id > int(last_processed_id):
                 post = posts[0]
                 message = f"/s/{community_name} has a new post by {post['author_username']}: [{post['title']}]({post['url']})"
