@@ -42,6 +42,9 @@ def update_notifybot_gist(data):
     resp = requests.patch(url, json=payload, headers=headers)
     logging.info(f"Updating notifybot.json with data: {prettified_data}")
     resp.raise_for_status()
+    if resp.status_code != 200:
+        logging.error(f"Update Gist Error response: {resp.text}")
+        resp.raise_for_status()
 
 # 4. Helper function to check for new posts and notify moderators:
 
@@ -61,6 +64,9 @@ def check_and_notify(user):
 
         resp = requests.get(f"https://squabblr.co/api/s/{community_name}/posts?page=1&sort=new", headers=headers)
         resp.raise_for_status()
+        if resp.status_code != 200:
+            logging.error(f"Check and Notify Error in Community response: {resp.text}")
+            resp.raise_for_status()
 
         posts = resp.json().get('data', [])
 
@@ -77,7 +83,7 @@ def check_and_notify(user):
             resp = requests.post(f"https://squabblr.co/api/message-threads/{user['thread_id']}/messages", data={"content": message, "user_id": NOTIFYBOT_ID}, headers=headers)
             
             if resp.status_code != 200:
-                logging.error(f"Error response: {resp.text}")
+                logging.error(f"Check and Notify Error in Post response: {resp.text}")
                 resp.raise_for_status()
             
             logging.info("DM has been sent.")
