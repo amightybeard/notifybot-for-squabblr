@@ -74,11 +74,11 @@ def check_and_notify(user):
             logging.info(f"Sending a DM to {user['username']}: {message}")
             
             # Send DM to the moderator
-            resp = requests.post(f"https://squabblr.co/api/message-threads/{user['thread_id']}/messages",
-                                 data={"content": message, "user_id": NOTIFYBOT_ID},
-                                 headers=headers)
+            resp = requests.post(f"https://squabblr.co/api/message-threads/{user['thread_id']}/messages", data={"content": message, "user_id": NOTIFYBOT_ID}, headers=headers)
             
-            resp.raise_for_status()
+            if resp.status_code != 200:
+                logging.error(f"Error response: {resp.text}")
+                resp.raise_for_status()
             
             logging.info("DM has been sent.")
             
