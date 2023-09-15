@@ -1,76 +1,88 @@
-import requests
+# 1. Importing required modules and initializing constants:
+
 import os
-import json
-import csv
-from datetime import datetime
+import requests
+import time
+import logging
 
+# Constants
 SQUABBLES_TOKEN = os.environ.get('SQUABBLES_TOKEN')
-GIST_TOKEN = os.environ.get('GITHUB_TOKEN')
-GIST_ID = os.environ.get('NOTIFYBOT_GIST')
-FILE_NAME = 'notifybot.json'
-BOT_USER_ID = 35748
+NOTIFYBOT_ID = os.environ.get('NOTIFYBOT_ID')
+NOTIFYBOT_GIST_TOKEN = os.environ.get('NOTIFYBOT_GIST_TOKEN')
+NOTIFYBOT_GIST_ID = os.environ.get('NOTIFYBOT_GIST_ID')
+NOTIFYBOT_GIST_FILENAME = 'notifybot.json'
 
-def fetch_last_processed_ids():
-    try:
-        resp = requests.get(GIST_URL)
-        resp.raise_for_status()
-        data = resp.json()
-        return data
-    except requests.RequestException as e:
-        logging.error(f"Failed to fetch processed IDs from Gist. Error: {e}")
-        return {}
+# Setting up logging
+logging.basicConfig(level=logging.INFO)
 
-def save_processed_id(community, post_id):
-    data = fetch_last_processed_ids()
-    data[community]['last_processed_id'] = post_id
-    
-    headers = {
-        'Authorization': f'token {GIST_TOKEN}',
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json'
-    }
-    
+# 2. Helper function to fetch the current notifybot.json from GitHub Gist:
+
+def fetch_notifybot_gist():
+    url = f'https://api.github.com/gists/{NOTIFYBOT_GIST_ID}'
+    headers = {'Authorization': f'token {NOTIFYBOT_GIST_TOKEN}'}
+    resp = requests.get(url, headers=headers)
+    resp.raise_for_status()  # Raise an exception for HTTP errors
+    return resp.json()['files'][NOTIFYBOT_GIST_FILENAME]['content']
+
+# 3. Helper function to update notifybot.json:
+
+def update_notifybot_gist(data):
+    url = f'https://api.github.com/gists/{NOTIFYBOT_GIST_ID}'
+    headers = {'Authorization': f'token {NOTIFYBOT_GIST_TOKEN}'}
     payload = {
-        "files": {
-            FILE_NAME: {
-                "content": json.dumps(data, indent=4)
+        'files': {
+            NOTIFYBOT_GIST_FILENAME: {
+                'content': data
             }
         }
     }
+    resp = requests.patch(url, json=payload, headers=headers)
+    resp.raise_for_status()
 
-    try:
-        resp = requests.patch(f"https://api.github.com/gists/{GIST_ID}", headers=headers, json=payload)
+# 4. Helper function to check for new posts and notify moderators:
+
+def check_and_notify(user):
+    headers = {'authorization': 'Bearer ' + SQUABBLES_TOKEN}
+    for community in user['communities']:
+        community_name = community['community_name']
+        last_processed_id = community['last_processed_id']
+        
+        # Fetch the latest posts for the community
+        resp = requests.get(f'https://squabblr.co/api/s/{community_name}/posts?page=1&sort=new')
         resp.raise_for_status()
-    except requests.RequestException as e:
-        logging.error(f"Failed to update processed ID for {community}. Error: {e}. Resp: {resp}")
+        posts = resp.json()
+        
+        # If there's a new post
+        if posts and posts[0]['id'] > last_processed_id:
+            post = posts[0]
+            message = f"/s/{community_name} has a new post by {post['author_username']}: [{post['title']}]({post['url']})"
+            logging.info(f"Sending message: {message}")
+            
+            # Send DM to the moderator
+            resp = requests.post(f'https://squabblr.co/api/message-threads/{user['thread_id']}/messages',
+                                 data={"content": message, "user_id": NOTIFYBOT_ID},
+                                 headers=headers)
+            resp.raise_for_status()
+            
+            # Update the last_processed_id
+            community['last_processed_id'] = post['id']
+            logging.info(f"Updated last_processed_id for {community_name} to {post['id']}")
 
-def send_dm(thread_id, message):
-    headers = {
-        'authorization': 'Bearer ' + SQUABBLES_TOKEN
-    }
-    resp = requests.post(f'https://squabblr.co/api/message-threads/{thread_id}/messages', data={"content": message, "user_id": BOT_USER_ID}, headers=headers)
-    return resp.json()
+# 5. Main function:
 
-def get_latest_posts():
-    processed_ids = fetch_last_processed_ids()
-
-    for community, data in processed_ids.items():
-        last_processed_id = data['last_processed_id']
-
-        logging.info(f"Checking posts for community: {community}")
-        response = requests.get(f'https://squabblr.co/api/s/{community}/posts?page=1&sort=new&')
-
-        if response.status_code != 200:
-            logging.warning(f"Failed to fetch posts for community: {community}")
-            continue
-
-        posts = response.json()["data"]
-        for post in posts:
-            post_id = post['id']
-
-            if post_id <= last_processed_id:
-                continue
+def main():
+    # Fetch the current notifybot.json
+    notifybot_json = fetch_notifybot_gist()
+    
+    # Check for new posts and notify moderators
+    for user in notifybot_json['users']:
+        check_and_notify(user)
+        
+        # Cooldown
+        time.sleep(15)
+    
+    # Update notifybot.json
+    update_notifybot_gist(notifybot_json)
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    get_latest_posts()
+    main()
