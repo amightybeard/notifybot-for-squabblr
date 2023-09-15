@@ -47,7 +47,7 @@ def update_notifybot_gist(data):
 
 def check_and_notify(user):
     headers = {
-        'Authorization': f"Bearer {SQUABBLR_API_TOKEN}",
+        'Authorization': f"Bearer {SQUABBLES_TOKEN}",
         'Accept': 'application/json',
         'Content-Type': 'application/json'
     }
