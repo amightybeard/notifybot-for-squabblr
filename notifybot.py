@@ -59,7 +59,7 @@ def check_and_notify(user):
         logging.info(f"Checking /s/{community_name} for new posts")
         logging.info(f"Last processed ID for /s/{community_name}: {last_processed_id}")
 
-        resp = requests.get(f"https://squabblr.co/api/communities/{community_name}/posts", headers=headers)
+        resp = requests.get(f"https://squabblr.co/api/s/{community_name}/posts?page=1&sort=new", headers=headers)
         resp.raise_for_status()
 
         posts = resp.json().get('data', [])
