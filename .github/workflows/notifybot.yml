@@ -1,15 +1,15 @@
-name: Run Notifier Bot
+name: NotifyBot Workflow
 
 on:
-  workflow_dispatch:
+  # schedule:
+  #   - cron: '*/5 * * * *' # Run every 5 minutes
+  workflow_dispatch: # Allows for manual trigger
 
 jobs:
   notify:
     runs-on: ubuntu-latest
-    name: Notify on new post
-
     steps:
-    - name: Checkout code
+    - name: Check out repository
       uses: actions/checkout@v2
 
     - name: Set up Python
@@ -19,10 +19,13 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install -r includes/requirements.txt
+        python -m pip install --upgrade pip
+        pip install requests
 
-    - name: Notifier Bot
-      run: python notifier.py
+    - name: Run notifybot.py
       env:
         SQUABBLES_TOKEN: ${{ secrets.SQUABBLES_TOKEN }}
-        GITHUB_TOKEN: ${{ secrets.WRITE_TO_TIMESTAMP }}
+        NOTIFYBOT_ID: ${{ secrets.NOTIFYBOT_ID }}
+        NOTIFYBOT_GIST_TOKEN: ${{ secrets.NOTIFYBOT_GIST_TOKEN }}
+        NOTIFYBOT_GIST_ID: ${{ secrets.NOTIFYBOT_GIST_ID }}
+      run: python notifybot.py
