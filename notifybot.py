@@ -74,7 +74,7 @@ def check_and_notify(user, notifybot_json):
         new_posts = [post for post in posts if post['id'] > last_processed_id]
 
         for post in new_posts:
-            message = f"/s/{community_name} has a new post by {post['author_username']}: [{post['title']}]({post['url']})"
+            message = f"/s/{community_name} has a new post by @{post['author_username']}: [{post['title']}]({post['url']})"
             
             logging.info(f"Located a new post in /s/{community_name}. Notifying the mods.")
             logging.info(f"Sending a DM to {user['username']}: {message}")
