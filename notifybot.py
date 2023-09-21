@@ -127,7 +127,7 @@ def check_and_notify(user, notifybot_json):
                 message = f"https://squabblr.co/s/{community_name}/chat has had 5 messages in the last 15-minutes."
             
             # Send DM to the moderator
-            resp = requests.post(f"https://squabblr.co/api/message-threads/{user['thread_id']}/messages", data={"content": message, "user_id": NOTIFYBOT_ID}, headers=headers)
+            resp = requests.post(f"https://squabblr.co/api/message-threads/{user['thread_id']}/messages", json={"content": message, "user_id": NOTIFYBOT_ID}, headers=headers)
             if resp.status_code not in [200,201]:
                 logging.error(f"Error in Chat DM response: {resp.text}")
                 resp.raise_for_status()
@@ -146,7 +146,7 @@ def check_and_notify(user, notifybot_json):
                 message = f"https://squabblr.co/s/{community_name}/chat has a new message by @{latest_message['user']['username']}: {latest_message['content']}"
             
             # Send DM to the moderator
-            resp = requests.post(f"https://squabblr.co/api/message-threads/{user['thread_id']}/messages", data={"content": message, "user_id": NOTIFYBOT_ID}, headers=headers)
+            resp = requests.post(f"https://squabblr.co/api/message-threads/{user['thread_id']}/messages", json={"content": message, "user_id": NOTIFYBOT_ID}, headers=headers)
             
             if resp.status_code not in [200,201]:
                 logging.error(f"Error in Chat DM response: {resp.text}")
