@@ -93,7 +93,45 @@ def check_and_notify(user, notifybot_json):
                 community['last_processed_id'] = post['id']
                 logging.info(f"Updating notifybot.json with the new post ID: {post['id']} for /s/{community_name}")
 
+    for chat in user.get('chats', []):
+        community_name = chat['community_name']
+        last_processed_chat_id = chat['last_processed_id']
+        chat_status = chat.get('chat_status', 'quiet')
+        
+        # Fetch chat messages
+        resp = requests.get(f"https://squabblr.co/api/s/{community_name}/chat-messages", headers=headers)
+        resp.raise_for_status()
 
+        chat_messages = resp.json().get('messages', [])
+        latest_message = chat_messages[0] if chat_messages else None
+
+        new_chat_status, latest_chat_id = check_chat_status(chat_messages, last_processed_chat_id)
+        
+        if new_chat_status != chat_status:
+            chat['chat_status'] = new_chat_status
+            
+            if new_chat_status == "busy":
+                message = f"https://squabblr.co/s/{community_name}/chat has had 5 messages in the last 15-minutes."
+            elif latest_message:
+                message = f"https://squabblr.co/s/{community_name}/chat has a new message by @{latest_message['user']['username']}: {latest_message['content']}"
+            
+            # Send DM to the moderator
+            resp = requests.post(f"https://squabblr.co/api/message-threads/{user['thread_id']}/messages", data={"content": message, "user_id": NOTIFYBOT_ID}, headers=headers)
+            
+            if resp.status_code not in [200,201]:
+                logging.error(f"Error in Chat DM response: {resp.text}")
+                resp.raise_for_status()
+            logging.info(f"DM regarding /s/{community_name}/chat has been sent to {user['username']}.")
+            
+            chat['last_processed_id'] = latest_chat_id
+            logging.info(f"Updating notifybot.json with the new chat message ID: {latest_chat_id} for /s/{community_name}/chat")
+
+    # Update the notifybot.json gist after processing all communities and chats for this user
+    update_notifybot_gist(user_data)
+
+    # Update the notifybot.json gist after processing all communities and chats for this user
+    update_notifybot_gist(user_data)
+    
 # 5. Main function:
 
 def main():
