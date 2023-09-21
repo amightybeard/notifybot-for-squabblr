@@ -53,7 +53,7 @@ def check_chat_status(chat_messages, last_processed_chat_id):
     Checks the chat status based on recent messages and returns the new status and the latest chat ID.
     """
     current_time = datetime.now()
-    recent_messages = [msg for msg in chat_messages if (current_time - datetime.fromisoformat(msg['created_at'])).seconds <= 900]  # Messages in the last 15 minutes
+    recent_messages = [msg for msg in chat_messages if (current_time - datetime.fromisoformat(msg['created_at'].replace('Z', ''))).seconds <= 900] # Messages in the last 15 minutes
 
     latest_chat_id = chat_messages[0]['id'] if chat_messages else last_processed_chat_id
     new_chat_status = "busy" if len(recent_messages) >= 5 else "quiet"
