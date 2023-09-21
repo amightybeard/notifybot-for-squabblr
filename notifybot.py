@@ -122,9 +122,9 @@ def check_and_notify(user, notifybot_json):
         # If there are new messages since the last_processed_id
         if latest_chat_id > last_processed_chat_id:
             if new_chat_status == "quiet":
-                message = f"https://squabblr.co/s/{community_name}/chat has a new message by @{chat_messages[0]['user']['username']}: {chat_messages[0]['content']}"
+                content = f"https://squabblr.co/s/{community_name}/chat has a new message by @{chat_messages[0]['user']['username']}: {chat_messages[0]['content']}"
             elif new_chat_status == "busy":
-                message = f"https://squabblr.co/s/{community_name}/chat has had 5 messages in the last 15-minutes."
+                content = f"https://squabblr.co/s/{community_name}/chat has had 5 messages in the last 15-minutes."
             
             # Send DM to the moderator
             resp = requests.post(f"https://squabblr.co/api/message-threads/{user['thread_id']}/messages", data={"content": message, "user_id": NOTIFYBOT_ID}, headers=headers)
@@ -141,9 +141,9 @@ def check_and_notify(user, notifybot_json):
             chat['chat_status'] = new_chat_status
             
             if new_chat_status == "busy":
-                message = f"https://squabblr.co/s/{community_name}/chat has had 5 messages in the last 15-minutes."
+                content = f"https://squabblr.co/s/{community_name}/chat has had 5 messages in the last 15-minutes."
             elif latest_message:
-                message = f"https://squabblr.co/s/{community_name}/chat has a new message by @{latest_message['user']['username']}: {latest_message['content']}"
+                content = f"https://squabblr.co/s/{community_name}/chat has a new message by @{latest_message['user']['username']}: {latest_message['content']}"
             
             # Send DM to the moderator
             resp = requests.post(f"https://squabblr.co/api/message-threads/{user['thread_id']}/messages", data={"content": message, "user_id": NOTIFYBOT_ID}, headers=headers)
