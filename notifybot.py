@@ -47,6 +47,17 @@ def update_notifybot_gist(data):
         resp.raise_for_status()
 
 # 4. Helper function to check for new posts and notify moderators:
+def check_chat_status(chat_messages, last_processed_chat_id):
+    """
+    Checks the chat status based on recent messages and returns the new status and the latest chat ID.
+    """
+    current_time = datetime.now()
+    recent_messages = [msg for msg in chat_messages if (current_time - datetime.fromisoformat(msg['created_at'])).seconds <= 900]  # Messages in the last 15 minutes
+
+    latest_chat_id = chat_messages[0]['id'] if chat_messages else last_processed_chat_id
+    new_chat_status = "busy" if len(recent_messages) >= 5 else "quiet"
+    
+    return new_chat_status, latest_chat_id
 
 def check_and_notify(user, notifybot_json):
     headers = {
@@ -125,9 +136,6 @@ def check_and_notify(user, notifybot_json):
             
             chat['last_processed_id'] = latest_chat_id
             logging.info(f"Updating notifybot.json with the new chat message ID: {latest_chat_id} for /s/{community_name}/chat")
-
-    # Update the notifybot.json gist after processing all communities and chats for this user
-    update_notifybot_gist(user_data)
 
     # Update the notifybot.json gist after processing all communities and chats for this user
     update_notifybot_gist(user_data)
