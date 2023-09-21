@@ -41,7 +41,7 @@ def update_notifybot_gist(data):
         }
     }
     resp = requests.patch(url, json=payload, headers=headers)
-    logging.info(f"Updating notifybot.json with data: {prettified_data}")
+    logging.info(f"Updating notifybot.json with the new data.")
     resp.raise_for_status()
     if resp.status_code not in [200,201]:
         logging.error(f"Update Gist Error response: {resp.text}")
@@ -111,21 +111,32 @@ def check_and_notify(user, notifybot_json):
         last_processed_chat_id = chat['last_processed_id']
         chat_status = chat.get('chat_status', 'quiet')
         
-        logging.info(f"Checking chat for /s/{community_name}")  # Logging for chat information
-    
         # Fetch chat messages
         resp = requests.get(f"https://squabblr.co/api/s/{community_name}/chat-messages", headers=headers)
         resp.raise_for_status()
-    
         chat_messages = resp.json().get('messages', [])
-        logging.info(f"Fetched {len(chat_messages)} chat messages for /s/{community_name}")  # Logging for API responses
         
-        latest_message = chat_messages[0] if chat_messages else None
-    
+        # Get the chat status and the latest chat ID
         new_chat_status, latest_chat_id = check_chat_status(chat_messages, last_processed_chat_id)
         
-        logging.info(f"Chat status for /s/{community_name}: {new_chat_status}. Latest chat ID: {latest_chat_id}")  # Logging for chat status checking
+        # If there are new messages since the last_processed_id
+        if latest_chat_id > last_processed_chat_id:
+            if new_chat_status == "quiet":
+                message = f"https://squabblr.co/s/{community_name}/chat has a new message by @{chat_messages[0]['user']['username']}: {chat_messages[0]['content']}"
+            elif new_chat_status == "busy":
+                message = f"https://squabblr.co/s/{community_name}/chat has had 5 messages in the last 15-minutes."
+            
+            # Send DM to the moderator
+            resp = requests.post(f"https://squabblr.co/api/message-threads/{user['thread_id']}/messages", data={"content": message, "user_id": NOTIFYBOT_ID}, headers=headers)
+            if resp.status_code not in [200,201]:
+                logging.error(f"Error in Chat DM response: {resp.text}")
+                resp.raise_for_status()
+            logging.info(f"DM regarding /s/{community_name}/chat has been sent to {user['username']}.")
+            
+            chat['last_processed_id'] = latest_chat_id
+            logging.info(f"Updating notifybot.json with the new chat message ID: {latest_chat_id} for /s/{community_name}/chat")
         
+        # Update the chat status if it has changed
         if new_chat_status != chat_status:
             chat['chat_status'] = new_chat_status
             
