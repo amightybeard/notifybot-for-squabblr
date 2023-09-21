@@ -139,7 +139,7 @@ def check_and_notify(user, notifybot_json):
             logging.info(f"Updating notifybot.json with the new chat message ID: {latest_chat_id} for /s/{community_name}/chat")
 
     # Update the notifybot.json gist after processing all communities and chats for this user
-    update_notifybot_gist(user_data)
+    update_notifybot_gist(notifybot_json)
     
 # 5. Main function:
 
