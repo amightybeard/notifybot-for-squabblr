@@ -105,19 +105,26 @@ def check_and_notify(user, notifybot_json):
                 community['last_processed_id'] = post['id']
                 logging.info(f"Updating notifybot.json with the new post ID: {post['id']} for /s/{community_name}")
 
+    # Check and notify for chat messages
     for chat in user.get('chats', []):
         community_name = chat['community_name']
         last_processed_chat_id = chat['last_processed_id']
         chat_status = chat.get('chat_status', 'quiet')
         
+        logging.info(f"Checking chat for /s/{community_name}")  # Logging for chat information
+    
         # Fetch chat messages
         resp = requests.get(f"https://squabblr.co/api/s/{community_name}/chat-messages", headers=headers)
         resp.raise_for_status()
-
+    
         chat_messages = resp.json().get('messages', [])
+        logging.info(f"Fetched {len(chat_messages)} chat messages for /s/{community_name}")  # Logging for API responses
+        
         latest_message = chat_messages[0] if chat_messages else None
-
+    
         new_chat_status, latest_chat_id = check_chat_status(chat_messages, last_processed_chat_id)
+        
+        logging.info(f"Chat status for /s/{community_name}: {new_chat_status}. Latest chat ID: {latest_chat_id}")  # Logging for chat status checking
         
         if new_chat_status != chat_status:
             chat['chat_status'] = new_chat_status
