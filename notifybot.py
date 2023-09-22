@@ -89,10 +89,10 @@ def check_and_notify(user, notifybot_json):
             content = f"/s/{community_name} has a new post by @{post['author_username']}: [{post['title']}]({post['url']})"
             
             logging.info(f"Located a new post in /s/{community_name}. Notifying the mods.")
-            logging.info(f"Sending a DM to {user['username']}: {message}")
+            logging.info(f"Sending a DM to {user['username']}: {content}")  # <-- Updated this line
             
             # Send DM to the moderator
-            resp = requests.post(f"https://squabblr.co/api/message-threads/{user['thread_id']}/messages", json={"content": message, "user_id": NOTIFYBOT_ID}, headers=headers)
+            resp = requests.post(f"https://squabblr.co/api/message-threads/{user['thread_id']}/messages", json={"content": content, "user_id": NOTIFYBOT_ID}, headers=headers)  # <-- Updated this line
             
             if resp.status_code not in [200,201]:
                 logging.error(f"Check and Notify Error in Post response: {resp.text}")
@@ -104,6 +104,7 @@ def check_and_notify(user, notifybot_json):
             if post['id'] > community['last_processed_id']:
                 community['last_processed_id'] = post['id']
                 logging.info(f"Updating notifybot.json with the new post ID: {post['id']} for /s/{community_name}")
+
 
     # Check and notify for chat messages
     for chat in user.get('chats', []):
