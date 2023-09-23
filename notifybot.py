@@ -147,7 +147,7 @@ def main():
     notifybot_json = fetch_notifybot_gist()
     
     # Check for new posts and notify moderators
-    check_and_notify(CURRENT_USER, notifybot_json)  # We now pass the CURRENT_USER directly
+    check_and_notify(notifybot_json)  # We now pass the CURRENT_USER directly
         
     # Cooldown
     time.sleep(15)
