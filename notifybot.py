@@ -48,6 +48,17 @@ def update_notifybot_gist(data):
         resp.raise_for_status()
 
 # 4. Helper function to check for new posts and notify moderators:
+
+def send_dm(thread_id, content):
+    """
+    Helper function to send a DM.
+    """
+    resp = requests.post(f"https://squabblr.co/api/message-threads/{thread_id}/messages", json={"content": content, "user_id": NOTIFYBOT_ID}, headers=headers)
+    resp.raise_for_status()
+    if resp.status_code not in [200, 201]:
+        logging.error(f"Error in DM response: {resp.text}")
+        resp.raise_for_status()
+        
 def check_chat_status(chat_messages, last_processed_chat_id):
     """
     Checks the chat status based on recent messages and returns the new status and the latest chat ID.
@@ -60,7 +71,17 @@ def check_chat_status(chat_messages, last_processed_chat_id):
     
     return new_chat_status, latest_chat_id
 
-def check_and_notify(user, notifybot_json):
+def send_dm(thread_id, content):
+    """
+    Helper function to send a DM.
+    """
+    resp = requests.post(f"https://squabblr.co/api/message-threads/{thread_id}/messages", json={"content": content, "user_id": NOTIFYBOT_ID}, headers=headers)
+    resp.raise_for_status()
+    if resp.status_code not in [200, 201]:
+        logging.error(f"Error in DM response: {resp.text}")
+        resp.raise_for_status()
+
+def check_and_notify(notifybot_json):
     headers = {
         'Authorization': f"Bearer {SQUABBLES_TOKEN}",
         'Accept': 'application/json',
@@ -86,10 +107,9 @@ def check_and_notify(user, notifybot_json):
             logging.info(f"Located a new post in /s/{community_name}. Notifying the mods.")
             
             for watcher in community["watchers"]:
-                if watcher["user_id"] == user["user_id"]:
-                    send_dm(watcher["thread_id"], content)
-                    community["last_processed_id"] = post["id"]
-                    logging.info(f"Updated last_processed_id for /s/{community_name} to {post['id']}.")
+                send_dm(watcher["thread_id"], content)
+                community["last_processed_id"] = post["id"]
+                logging.info(f"Updated last_processed_id for /s/{community_name} to {post['id']}.")
 
     # Processing chats
     for chat in notifybot_json["chats"]:
@@ -108,19 +128,18 @@ def check_and_notify(user, notifybot_json):
             message = f"https://squabblr.co/s/{community_name}/chat has a new message by @{chat_messages[0]['user']['username']}: {chat_messages[0]['content']}"
             
             for watcher in chat["watchers"]:
-                if watcher["user_id"] == user["user_id"]:
-                    send_dm(watcher["thread_id"], message)
-                    chat["last_processed_id"] = latest_chat_id
-                    logging.info(f"Updated last_processed_id for /s/{community_name}/chat to {latest_chat_id}.")
+                send_dm(watcher["thread_id"], message)
+                chat["last_processed_id"] = latest_chat_id
+                logging.info(f"Updated last_processed_id for /s/{community_name}/chat to {latest_chat_id}.")
 
         # Update the chat status if it has changed
         if new_chat_status != chat["chat_status"]:
             chat["chat_status"] = new_chat_status
             logging.info(f"Updated chat_status for /s/{community_name} to {new_chat_status}.")
 
-    # Update the notifybot.json gist after processing all communities and chats for this user
+    # Update the notifybot.json gist after processing all communities and chats
     update_notifybot_gist(notifybot_json)
-    
+     
 # 5. Main function:
 
 def main():
