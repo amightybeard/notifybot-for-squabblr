@@ -14,6 +14,12 @@ NOTIFYBOT_GIST_TOKEN = os.environ.get('NOTIFYBOT_GIST_TOKEN')
 NOTIFYBOT_GIST_ID = os.environ.get('NOTIFYBOT_GIST_ID')
 NOTIFYBOT_GIST_FILENAME = 'notifybot.json'
 
+headers = {
+    'Authorization': f"Bearer {SQUABBLES_TOKEN}",
+    'Accept': 'application/json',
+    'Content-Type': 'application/json'
+}
+
 # Setting up logging
 logging.basicConfig(level=logging.INFO)
 
@@ -82,11 +88,6 @@ def send_dm(thread_id, content):
         resp.raise_for_status()
 
 def check_and_notify(notifybot_json):
-    headers = {
-        'Authorization': f"Bearer {SQUABBLES_TOKEN}",
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-    }
 
     # Processing communities
     for community in notifybot_json["communities"]:
