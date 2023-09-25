@@ -14,7 +14,7 @@ NOTIFYBOT_GIST_TOKEN = os.environ.get('NOTIFYBOT_GIST_TOKEN')
 NOTIFYBOT_GIST_ID = os.environ.get('NOTIFYBOT_GIST_ID')
 NOTIFYBOT_GIST_FILENAME = 'notifybot.json'
 
-with open('user-blacklist.txt', 'r') as f:
+with open('includes/user-blacklist.txt', 'r') as f:
     BLACKLISTED_USERS = set([line.strip() for line in f.readlines()])
 
 headers = {
