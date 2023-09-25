@@ -14,6 +14,9 @@ NOTIFYBOT_GIST_TOKEN = os.environ.get('NOTIFYBOT_GIST_TOKEN')
 NOTIFYBOT_GIST_ID = os.environ.get('NOTIFYBOT_GIST_ID')
 NOTIFYBOT_GIST_FILENAME = 'notifybot.json'
 
+with open('user-blacklist.txt', 'r') as f:
+    BLACKLISTED_USERS = set([line.strip() for line in f.readlines()])
+
 headers = {
     'Authorization': f"Bearer {SQUABBLES_TOKEN}",
     'Accept': 'application/json',
@@ -104,13 +107,14 @@ def check_and_notify(notifybot_json):
         new_posts = [post for post in posts if post['id'] > last_processed_id]
 
         for post in new_posts:
-            content = f"/s/{community_name} has a new post by @{post['author_username']}: [{post['title']}]({post['url']})"
-            logging.info(f"Located a new post in /s/{community_name}. Notifying the mods.")
-            
-            for watcher in community["watchers"]:
-                send_dm(watcher["thread_id"], content)
-                community["last_processed_id"] = post["id"]
-                logging.info(f"Updated last_processed_id for /s/{community_name} to {post['id']}.")
+            if post['author_username'] not in BLACKLISTED_USERS:
+                content = f"/s/{community_name} has a new post by @{post['author_username']}: [{post['title']}]({post['url']})"
+                logging.info(f"Located a new post in /s/{community_name}. Notifying the mods.")
+                
+                for watcher in community["watchers"]:
+                    send_dm(watcher["thread_id"], content)
+                    community["last_processed_id"] = post["id"]
+                    logging.info(f"Updated last_processed_id for /s/{community_name} to {post['id']}.")
 
     # Processing chats
     for chat in notifybot_json["chats"]:
